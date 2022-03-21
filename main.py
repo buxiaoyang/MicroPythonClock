@@ -39,6 +39,8 @@ timeMinute = 0
 timeSecond = 0
 # Time setting state. 0: Not set, 1: Set minute, 2: Set hour
 timeSetNumber = 0
+# Setting state time count, used to exist setting state after 20 second
+timeSetCounter = 0
 
 def Init():
     """Init function which do init when starts
@@ -59,7 +61,7 @@ def Init():
     timer.init(freq=2.00055, mode=Timer.PERIODIC, callback=Pulse500ms)
 
 def Pulse500ms(timer):
-    """Time pulse function which to caculate time travel
+    """Time pulse function which to caculate time travel, run every 500ms
 
     Args:
         timer: timer variable
@@ -69,7 +71,7 @@ def Pulse500ms(timer):
     pinClockDot.toggle()
     
     # Caculate the time travel
-    global timeSecond,timeMinute,timeHour
+    global timeSecond,timeMinute,timeHour,timeSetNumber,timeSetCounter
     timeSecond = timeSecond + 1
     # If second is 60 then minute plus 1
     if timeSecond >= 120: # Why 120? because the pulse is 0.5s
@@ -84,27 +86,42 @@ def Pulse500ms(timer):
         timeHour = 0
     # Flashing the set number
     if timeSetNumber == 1:
+        # Count time set state time
+        timeSetCounter = timeSetCounter + 1
         # Flashing minute number
         if arrayDigFlashing[3] == 1:
+            arrayDigFlashing[0] = 1
+            arrayDigFlashing[1] = 1
             arrayDigFlashing[2] = 0
             arrayDigFlashing[3] = 0
         else:
+            arrayDigFlashing[0] = 1
+            arrayDigFlashing[1] = 1
             arrayDigFlashing[2] = 1
             arrayDigFlashing[3] = 1
     elif timeSetNumber == 2:
+        # Count time set state time
+        timeSetCounter = timeSetCounter + 1
         # Flashing hour number
         if arrayDigFlashing[1] == 1:
             arrayDigFlashing[0] = 0
             arrayDigFlashing[1] = 0
+            arrayDigFlashing[2] = 1
+            arrayDigFlashing[3] = 1
         else:
             arrayDigFlashing[0] = 1
             arrayDigFlashing[1] = 1
+            arrayDigFlashing[2] = 1
+            arrayDigFlashing[3] = 1
     else:
         # No flashing
         arrayDigFlashing[0] = 1
         arrayDigFlashing[1] = 1
         arrayDigFlashing[2] = 1
         arrayDigFlashing[3] = 1
+    # Exist setting state after 20 second no operation
+    if timeSetCounter > 40:
+        timeSetNumber = 0
     
 # Call init function
 Init()
@@ -157,6 +174,9 @@ while True:
                 timeSetNumber = 0
                 # Reset the second to 0 every confirm setting
                 timeSecond = 0
+            # Rest the time setting counter
+            timeSetCounter = 0
+            # Go to key release
             btnSettingKeyStep = 3
         else:
             # Jitter detected, reset the state machine
@@ -189,6 +209,8 @@ while True:
                 timeHour = timeHour + 1
                 if timeHour >= 24:
                     timeHour = 0
+            # Rest the time setting counter
+            timeSetCounter = 0
             # Go to next step
             btnUpKeyStep = 3
             # Here use time second as the 10ms counter, so need to reset it
@@ -207,7 +229,6 @@ while True:
             if timeSecond > 10:
                 # Every 100ms confirm the key (number + 1)
                 btnUpKeyStep = 2
-            
     elif btnUpKeyStep == 4:
         # Key release
         if not btnUp.value():
