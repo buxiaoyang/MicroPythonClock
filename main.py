@@ -28,7 +28,7 @@ btnSetting = Pin(15, Pin.IN, Pin.PULL_DOWN)
 btnSettingKeyStep = 0
 # Up button define
 btnUp = Pin(14, Pin.IN, Pin.PULL_DOWN)
-# Up button key scan state. 0: No key enter 1: Key enter wating debounce 2: Key confirm 3: Key release
+# Up button key scan state. 0: No key enter 1: Key enter wating debounce 2: Key confirm 3: Key continuous confirm 4: Key release
 btnUpKeyStep = 0
 # Used for control number flashing, 0 not display and 1 display
 arrayDigFlashing = [1,1,1,1]
@@ -189,12 +189,26 @@ while True:
                 timeHour = timeHour + 1
                 if timeHour >= 24:
                     timeHour = 0
-            #Go to next step
+            # Go to next step
             btnUpKeyStep = 3
+            # Here use time second as the 10ms counter, so need to reset it
+            timeSecond = 0
         else:
-            # Jitter detected, reset the state machine
-            btnUpKeyStep = 0
+            # Jitter detected, go to key realease
+            btnUpKeyStep = 4
     elif btnUpKeyStep == 3:
+        # Key continuous confirm
+        if not btnUp.value():
+            # Got to key release
+            btnUpKeyStep = 4
+        else:
+            # continuous confirm
+            timeSecond = timeSecond + 1
+            if timeSecond > 10:
+                # Every 100ms confirm the key (number + 1)
+                btnUpKeyStep = 2
+            
+    elif btnUpKeyStep == 4:
         # Key release
         if not btnUp.value():
             btnUpKeyStep = 0      
