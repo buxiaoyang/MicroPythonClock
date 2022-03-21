@@ -13,6 +13,8 @@ timer = Timer()
 pinDP = Pin(7, Pin.OUT)
 # Clock dot pin
 pinClockDot = Pin(8, Pin.OUT)
+# Test output pulse for main loop
+pinLoopPulse = Pin(9, Pin.OUT)
 # 7 segment led strokes array pins
 arraySegPin = []
 # Dig pins array used to select which digital to display
@@ -20,14 +22,23 @@ arrayDigPin = []
 # 0~9 nunmber truth table for 7 segment led (a~g)
 arraySegNumber = [[1,1,1,1,1,1,0],[0,1,1,0,0,0,0],[1,1,0,1,1,0,1],[1,1,1,1,0,0,1],[0,1,1,0,0,1,1],[1,0,1,1,0,1,1],[1,0,1,1,1,1,1],[1,1,1,0,0,0,0],[1,1,1,1,1,1,1],[1,1,1,1,0,1,1]]
 
-# Input buttons pins
+# Setting button define
 btnSetting = Pin(15, Pin.IN, Pin.PULL_DOWN)
+# Setting button key scan state. 0: No key enter 1: Key enter wating debounce 2: Key confirm 3: Key release
+btnSettingKeyStep = 0
+# Up button define
 btnUp = Pin(14, Pin.IN, Pin.PULL_DOWN)
+# Up button key scan state. 0: No key enter 1: Key enter wating debounce 2: Key confirm 3: Key release
+btnUpKeyStep = 0
+# Used for control number flashing, 0 not display and 1 display
+arrayDigFlashing = [1,1,1,1]
 
-# Variables for count the time
+# Variables for the time
 timeHour = 0
 timeMinute = 0
 timeSecond = 0
+# Time setting state. 0: Not set, 1: Set minute, 2: Set hour
+timeSetNumber = 0
 
 def Init():
     """Init function which do init when starts
@@ -71,6 +82,29 @@ def Pulse500ms(timer):
     # If hour is 24 then set hour to 0
     if timeHour >= 24:
         timeHour = 0
+    # Flashing the set number
+    if timeSetNumber == 1:
+        # Flashing minute number
+        if arrayDigFlashing[3] == 1:
+            arrayDigFlashing[2] = 0
+            arrayDigFlashing[3] = 0
+        else:
+            arrayDigFlashing[2] = 1
+            arrayDigFlashing[3] = 1
+    elif timeSetNumber == 2:
+        # Flashing hour number
+        if arrayDigFlashing[1] == 1:
+            arrayDigFlashing[0] = 0
+            arrayDigFlashing[1] = 0
+        else:
+            arrayDigFlashing[0] = 1
+            arrayDigFlashing[1] = 1
+    else:
+        # No flashing
+        arrayDigFlashing[0] = 1
+        arrayDigFlashing[1] = 1
+        arrayDigFlashing[2] = 1
+        arrayDigFlashing[3] = 1
     
 # Call init function
 Init()
@@ -78,7 +112,10 @@ Init()
 while True:
     """Main loop which to handle display and button check etc
     """
-
+    
+    # Toggle the loop pulse test output (10ms for every loop)
+    pinLoopPulse.toggle()
+    
     # Get 4 display number
     timeNumberArray = []
     timeNumberArray.append(int((timeHour % 100)/10))
@@ -94,17 +131,74 @@ while True:
         # Choose right dig to display
         for dig in range(4):
             arrayDigPin[dig].value(1)
-        arrayDigPin[number].value(0)
+        # Determine the number flashing or not
+        if arrayDigFlashing[number] == 1:
+            arrayDigPin[number].value(0)
         # Wait for display a while
-        time.sleep(0.001)
+        time.sleep(0.002)
         # Close the display
         arrayDigPin[number].value(1)
 
-    # Handle key event
-    if btnSetting.value():
-        pinClockDot.value(0)
-    if btnUp.value():
-        pinClockDot.value(1)
+    # Handle setting key event state machine
+    if btnSettingKeyStep == 0:
+        # No key enter
+        if btnSetting.value():
+            #Go to next step
+            btnSettingKeyStep = 1
+    elif btnSettingKeyStep == 1:
+        # Key enter wating debounce
+        btnSettingKeyStep = 2
+    elif btnSettingKeyStep == 2:
+        # Key confirm
+        if btnSetting.value():
+            # Confirm the key event now set current setting
+            timeSetNumber = timeSetNumber + 1
+            if timeSetNumber > 2:
+                timeSetNumber = 0
+                # Reset the second to 0 every confirm setting
+                timeSecond = 0
+            btnSettingKeyStep = 3
+        else:
+            # Jitter detected, reset the state machine
+            btnSettingKeyStep = 0
+    elif btnSettingKeyStep == 3:
+        # Key release
+        if not btnSetting.value():
+            btnSettingKeyStep = 0
+            
+    # Handle up key event state machine
+    if btnUpKeyStep == 0:
+        # No key enter
+        if btnUp.value():
+            #Go to next step
+            btnUpKeyStep = 1
+    elif btnUpKeyStep == 1:
+        # Key enter wating debounce
+        btnUpKeyStep = 2
+    elif btnUpKeyStep == 2:
+        # Key confirm
+        if btnUp.value():
+            # Confirm the key event now set current setting number + 1
+            if timeSetNumber == 1:
+                # Minute set
+                timeMinute = timeMinute + 1
+                if timeMinute >= 60:
+                    timeMinute = 0
+            elif timeSetNumber == 2:
+                # Hour set
+                timeHour = timeHour + 1
+                if timeHour >= 24:
+                    timeHour = 0
+            #Go to next step
+            btnUpKeyStep = 3
+        else:
+            # Jitter detected, reset the state machine
+            btnUpKeyStep = 0
+    elif btnUpKeyStep == 3:
+        # Key release
+        if not btnUp.value():
+            btnUpKeyStep = 0      
+    
     
     
 
