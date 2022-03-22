@@ -232,8 +232,4 @@ while True:
     elif btnUpKeyStep == 4:
         # Key release
         if not btnUp.value():
-            btnUpKeyStep = 0      
-    
-    
-    
-
+            btnUpKeyStep = 0
