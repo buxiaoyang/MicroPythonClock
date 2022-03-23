@@ -38,7 +38,7 @@ timeHour = 0
 timeMinute = 0
 timeSecond = 0
 # Time setting state. 0: Not set, 1: Set minute, 2: Set hour
-timeSetNumber = 0
+timeSetState = 0
 # Setting state time count, used to exist setting state after 20 second
 timeSetCounter = 0
 
@@ -58,7 +58,7 @@ def Init():
     pinDP.value(0)
     
     # 0.5s timer, used for time count. 
-    timer.init(freq=2.00055, mode=Timer.PERIODIC, callback=Pulse500ms)
+    timer.init(freq=2, mode=Timer.PERIODIC, callback=Pulse500ms)
 
 def Pulse500ms(timer):
     """Time pulse function which to caculate time travel, run every 500ms
@@ -71,7 +71,7 @@ def Pulse500ms(timer):
     pinClockDot.toggle()
     
     # Caculate the time travel
-    global timeSecond,timeMinute,timeHour,timeSetNumber,timeSetCounter
+    global timeSecond,timeMinute,timeHour,timeSetState,timeSetCounter
     timeSecond = timeSecond + 1
     # If second is 60 then minute plus 1
     if timeSecond >= 120: # Why 120? because the pulse is 0.5s
@@ -85,7 +85,7 @@ def Pulse500ms(timer):
     if timeHour >= 24:
         timeHour = 0
     # Flashing the set number
-    if timeSetNumber == 1:
+    if timeSetState == 1:
         # Count time set state time
         timeSetCounter = timeSetCounter + 1
         # Flashing minute number
@@ -99,7 +99,7 @@ def Pulse500ms(timer):
             arrayDigFlashing[1] = 1
             arrayDigFlashing[2] = 1
             arrayDigFlashing[3] = 1
-    elif timeSetNumber == 2:
+    elif timeSetState == 2:
         # Count time set state time
         timeSetCounter = timeSetCounter + 1
         # Flashing hour number
@@ -121,7 +121,7 @@ def Pulse500ms(timer):
         arrayDigFlashing[3] = 1
     # Exist setting state after 20 second no operation
     if timeSetCounter > 40:
-        timeSetNumber = 0
+        timeSetState = 0
     
 # Call init function
 Init()
@@ -169,9 +169,9 @@ while True:
         # Key confirm
         if btnSetting.value():
             # Confirm the key event now set current setting
-            timeSetNumber = timeSetNumber + 1
-            if timeSetNumber > 2:
-                timeSetNumber = 0
+            timeSetState = timeSetState + 1
+            if timeSetState > 2:
+                timeSetState = 0
                 # Reset the second to 0 every confirm setting
                 timeSecond = 0
             # Rest the time setting counter
@@ -199,12 +199,12 @@ while True:
         # Key confirm
         if btnUp.value():
             # Confirm the key event now set current setting number + 1
-            if timeSetNumber == 1:
+            if timeSetState == 1:
                 # Minute set
                 timeMinute = timeMinute + 1
                 if timeMinute >= 60:
                     timeMinute = 0
-            elif timeSetNumber == 2:
+            elif timeSetState == 2:
                 # Hour set
                 timeHour = timeHour + 1
                 if timeHour >= 24:
