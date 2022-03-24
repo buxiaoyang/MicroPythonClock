@@ -60,10 +60,12 @@ def Init():
     # Set dp pin to value 0, which will not display at all
     pinDP.value(0)
     
+    # Wait 1s for RTC to init
+    time.sleep(1)
     # Init RTC, 0x51 is PCF8563's i2c address, 0x02 is it's second reg.
     i2c.writeto_mem(0x51, 0x02, b'\x00\x00\x09')
     
-    # 0.5s timer, used for time count. 
+    # 0.5s timer, used for time count.
     timer.init(freq=2, mode=Timer.PERIODIC, callback=Pulse500ms)
 
 def Pulse500ms(timer):
