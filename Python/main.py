@@ -89,7 +89,7 @@ def GetPWM():
     global brightnessPWM, brightnessStepsADC, brightnessStepsPWM
     
     brightnessPWM = 65536
-    #adcValue = brightnessADC.read_u16()
+    adcValue = brightnessADC.read_u16()
     print("ADC: ",adcValue)
     for step in range(13):
         if adcValue > brightnessStepsADC[step]:
