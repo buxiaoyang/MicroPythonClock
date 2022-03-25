@@ -1,18 +1,26 @@
 """MicroPython Clock
    Author: Bu, Xiao-Yang (Shawn)
-   Date: March 21, 2022
+   Date: March 23, 2022
 """
 
-from machine import Pin, Timer
+from machine import Pin, I2C, Timer, PWM
+import machine
 import time
 
 # Timer use for generate 0.5s pulse
 timer = Timer()
 
+# The photoresistance pin used to read brightness value
+brightnessADC = machine.ADC(28)
+
+# I2C for communicate with PCF8563 RTC chip
+i2c = I2C(0, scl=Pin(21), sda=Pin(20), freq=100000)
+
 # Number dot pin
 pinDP = Pin(7, Pin.OUT)
 # Clock dot pin
-pinClockDot = Pin(8, Pin.OUT)
+pinClockDot = PWM(Pin(8))
+pinClockDot.freq(100000)
 # Test output pulse for main loop
 pinLoopPulse = Pin(9, Pin.OUT)
 # 7 segment led strokes array pins
@@ -41,6 +49,13 @@ timeSecond = 0
 timeSetState = 0
 # Setting state time count, used to exist setting state after 20 second
 timeSetCounter = 0
+# Show clock dot or not, used to falshing the second dot
+time100msCounter = 0
+# LED brightness, max PWM is 65536
+brightnessPWM = 65536
+# LED brightness steps, the adc value is the photoresistance input while the pwm value is the brightness output
+brightnessStepsADC = [37000, 39000, 41000, 43000, 45000, 47000, 49000, 51000, 53000, 55000, 57000, 59000, 61000]
+brightnessStepsPWM = [65536, 60000, 55000, 50000, 45000, 40000, 35000, 30000, 25000, 20000, 15000, 10000, 5000]
 
 def Init():
     """Init function which do init when starts
@@ -49,7 +64,9 @@ def Init():
     # Define the strokes pin number 0->a, 1->b, 2->c, 3->d, 4->e, 5->f, 6->g
     segPinList = [0,1,2,3,4,5,6]
     for seg in segPinList:
-        arraySegPin.append(Pin(seg, Pin.OUT))
+        pwm = PWM(Pin(seg))
+        pwm.freq(100000)
+        arraySegPin.append(pwm)
     # Define the number pin 16->dig1, 17->dig2, 18->dig3, 19->dig4
     digPinList = [16,17,18,19]
     for dig in digPinList:
@@ -57,8 +74,26 @@ def Init():
     # Set dp pin to value 0, which will not display at all
     pinDP.value(0)
     
-    # 0.5s timer, used for time count. 
+    # Wait 1s for RTC to init
+    time.sleep(1)
+    # Init RTC, 0x51 is PCF8563's i2c address, 0x02 is it's second reg.
+    i2c.writeto_mem(0x51, 0x02, b'\x00\x00\x09')
+    
+    # 0.5s timer, used for time count.
     timer.init(freq=2, mode=Timer.PERIODIC, callback=Pulse500ms)
+
+def GetPWM():
+    """Get PWM value
+        Read the adc and use mapping steps to get PWM value
+    """
+    global brightnessPWM, brightnessStepsADC, brightnessStepsPWM
+    
+    brightnessPWM = 65536
+    #adcValue = brightnessADC.read_u16()
+    print("ADC: ",adcValue)
+    for step in range(13):
+        if adcValue > brightnessStepsADC[step]:
+            brightnessPWM = brightnessStepsPWM[step]
 
 def Pulse500ms(timer):
     """Time pulse function which to caculate time travel, run every 500ms
@@ -66,24 +101,19 @@ def Pulse500ms(timer):
     Args:
         timer: timer variable
     """
+    global timeSetState, timeSetCounter, time100msCounter, brightness
     
+    time100msCounter = time100msCounter + 1;
     # Toggle the clock dot to display
-    pinClockDot.toggle()
-    
-    # Caculate the time travel
-    global timeSecond,timeMinute,timeHour,timeSetState,timeSetCounter
-    timeSecond = timeSecond + 1
-    # If second is 60 then minute plus 1
-    if timeSecond >= 120: # Why 120? because the pulse is 0.5s
-        timeMinute = timeMinute + 1
-        timeSecond = 0
-    # If minute is 60 then hour plus 1
-    if timeMinute >= 60:
-        timeHour = timeHour + 1
-        timeMinute = 0
-    # If hour is 24 then set hour to 0
-    if timeHour >= 24:
-        timeHour = 0
+    if time100msCounter % 2 == 0:
+        pinClockDot.duty_u16(brightnessPWM)
+        timeClockDotShow = False
+    else:
+        pinClockDot.duty_u16(0)
+        timeClockDotShow = True
+    # Adjust the PWM every 5 seconds
+    if time100msCounter % 10 == 0:
+        GetPWM()
     # Flashing the set number
     if timeSetState == 1:
         # Count time set state time
@@ -123,6 +153,32 @@ def Pulse500ms(timer):
     if timeSetCounter > 40:
         timeSetState = 0
     
+def Bcd2dec(bcd):
+    """Convert BCD code to Dec number
+        refer to wiki for detail about BCD code: https://en.wikipedia.org/wiki/Binary-coded_decimal
+
+    Args:
+        bcd: BCD code which needs to convert to dec number
+        
+    Returns:
+        Dec number of that bcd
+        
+    """
+    return (((bcd & 0xf0) >> 4) * 10 + (bcd & 0x0f))
+        
+def Dec2bcd(dec):
+    """Convert Dec number to BCD code 
+
+    Args:
+        bcd: BCD code which needs to convert to dec number
+        
+    Returns:
+        Dec number of that bcd
+        
+    """
+    tens, units = divmod(dec, 10)
+    return (tens << 4) + units
+
 # Call init function
 Init()
 
@@ -132,6 +188,13 @@ while True:
     
     # Toggle the loop pulse test output (10ms for every loop)
     pinLoopPulse.toggle()
+    
+    # Read current time from RTC, 0x51 is PCF8563's i2c address, 0x02 is it's second reg.
+    if timeSetState == 0:
+        i2cMemRead = i2c.readfrom_mem(0x51, 0x02, 3)
+        timeHour = Bcd2dec(i2cMemRead[2] & 0x3F)
+        timeMinute = Bcd2dec(i2cMemRead[1] & 0x7F)
+        #timeSecond = Bcd2dec(memRead[0] & 0x7F)
     
     # Get 4 display number
     timeNumberArray = []
@@ -144,7 +207,10 @@ while True:
     for number in range(4):
         # Display current time number
         for seg in range(7):
-            arraySegPin[seg].value(arraySegNumber[timeNumberArray[number]][seg])
+            if arraySegNumber[timeNumberArray[number]][seg] == 1:
+                arraySegPin[seg].duty_u16(brightnessPWM)
+            else:
+                arraySegPin[seg].duty_u16(0)
         # Choose right dig to display
         for dig in range(4):
             arrayDigPin[dig].value(1)
@@ -172,8 +238,13 @@ while True:
             timeSetState = timeSetState + 1
             if timeSetState > 2:
                 timeSetState = 0
-                # Reset the second to 0 every confirm setting
-                timeSecond = 0
+                # Write setting value to RTC
+                i2cMemWrite = bytearray()
+                i2cMemWrite.append(Dec2bcd(0)) # Second set to 0
+                i2cMemWrite.append(Dec2bcd(timeMinute)) # Minute
+                i2cMemWrite.append(Dec2bcd(timeHour)) # Hour
+                # 0x51 is PCF8563's i2c address, 0x02 is it's second reg.
+                i2c.writeto_mem(0x51, 0x02, i2cMemWrite)
             # Rest the time setting counter
             timeSetCounter = 0
             # Go to key release
