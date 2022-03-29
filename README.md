@@ -1,7 +1,7 @@
 # MicroPythonClock
 MicroPython clock with Raspberry Pi Pico  
 
-The main.py is the final python script which works.  
+The Python/main.py is the final python script that works.  
 
 Front:  
 ![Front](Images/Front.png)
