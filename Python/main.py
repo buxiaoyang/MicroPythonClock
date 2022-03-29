@@ -54,7 +54,7 @@ time100msCounter = 0
 # LED brightness, max PWM is 65536
 brightnessPWM = 65536
 # LED brightness steps, the adc value is the photoresistance input while the pwm value is the brightness output
-brightnessStepsADC = [37000, 39000, 41000, 43000, 45000, 47000, 49000, 51000, 53000, 55000, 57000, 59000, 61000]
+brightnessStepsADC = [62500, 62700, 62900, 63100, 63300, 63500, 63700, 63900, 64100, 64300, 64500, 64700, 64900]
 brightnessStepsPWM = [65536, 60000, 55000, 50000, 45000, 40000, 35000, 30000, 25000, 20000, 15000, 10000, 5000]
 
 def Init():
