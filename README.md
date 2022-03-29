@@ -7,7 +7,15 @@ Refer to: https://www.raspberrypi.com/documentation/microcontrollers/micropython
 
 And the Thonny is a super simple tool to develop MicroPython with Raspberry Pi Pico: https://projects.raspberrypi.org/en/projects/getting-started-with-the-pico/2  
 
-# Images
+Hardware Modules
+-------------
+- 7 segment digital tube
+- Button
+- I2C real-time clock (PCF8563)
+- Photoresistance
+
+Images
+-------------
 Front:  
 ![Front](Images/Front.png)
 
