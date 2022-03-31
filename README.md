@@ -1,8 +1,21 @@
 # MicroPythonClock
-MicroPython clock with Raspberry Pi Pico  
+MicroPython clock with Raspberry Pi Pico.
 
-The main.py is the final python script which works.  
+The Python/main.py is the final python script that works.  
 
+Refer to: https://www.raspberrypi.com/documentation/microcontrollers/micropython.html to learn how to use MicroPython on Raspberry Pi Pico  
+
+And the Thonny is a super simple tool to develop MicroPython with Raspberry Pi Pico: https://projects.raspberrypi.org/en/projects/getting-started-with-the-pico/2  
+
+Hardware Modules
+-------------
+- 7 segment digital tube
+- Button
+- I2C real-time clock (PCF8563)
+- Photoresistance
+
+Images
+-------------
 Front:  
 ![Front](Images/Front.png)
 
