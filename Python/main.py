@@ -81,6 +81,16 @@ def Init():
     
     # 0.5s timer, used for time count.
     timer.init(freq=2, mode=Timer.PERIODIC, callback=Pulse500ms)
+    
+    # Read Ntp time on start up
+    GetNtpTime()
+
+def GetNtpTime():
+    """Get NTP server time
+        Get time from NTP server via wifi connection, the time will save to RTC chip
+    """
+    
+    # i2c.writeto_mem(0x51, 0x02, b'\x32\x32\x08')
 
 def GetPWM():
     """Get PWM value
