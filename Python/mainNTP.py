@@ -83,14 +83,11 @@ def Init():
     # Wait 1s for RTC to init
     time.sleep(1)
     # Init RTC, 0x51 is PCF8563's i2c address, 0x02 is it's second reg.
-    i2c.writeto_mem(0x51, 0x02, b'\x00\x00\x09')
+    i2c.writeto_mem(0x51, 0x02, b'\x57\x58\x23')
     
     # 0.5s timer, used for time count.
     timer.init(freq=2, mode=Timer.PERIODIC, callback=Pulse500ms)
     
-    # Read Ntp time on start up
-    GetNtpTime()
-
 def GetNtpTime():
     """Get NTP server time
         Get time from NTP server via wifi connection, the time will save to RTC chip
@@ -102,7 +99,7 @@ def GetNtpTime():
         wlan.connect(ssid, password)
         while wlan.isconnected() == False:
             print('Waiting for wifi connection...')
-            sleep(1)
+            time.sleep(1)
         ip = wlan.ifconfig()[0]
         # Handle connection error
         if wlan.status() != 3:
@@ -153,8 +150,8 @@ def GetNtpTime():
         print('Second: %d' % timeNow[5])
         # Write current time to RTC
         WriteRTC(timeNow[3], timeNow[4], timeNow[5])
-    except:
-        print('Fail to read time from NTP server')
+    except err:
+        print(err)
 def GetPWM():
     """Get PWM value
         Read the adc and use mapping steps to get PWM value
