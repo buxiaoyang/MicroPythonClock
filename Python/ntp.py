@@ -3,11 +3,16 @@ import socket
 from time import sleep
 from picozero import pico_temp_sensor, pico_led
 import machine
+import time
 
 ssid = 'buxiaoyangiot'
 password = 'buxiaoyang@123'
 
 try:
+
+
+def getNtpTime:
+    
     #Connect to WLAN
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -56,14 +61,10 @@ try:
     print(timeBuffer)
     # convert four bytes starting at location 40 to a long integer
     secsSince1900 = int.from_bytes(timeBuffer, "big")
-    print(secsSince1900)
-    
-    """
-    date1900 = datetime.date(1900, 1, 1)
-    print(date1900)
-    dateNow = date1900 + datetime.timedelta(seconds=secsSince1900)
-    print(dateNow)
-    """
- 
+    print('Total seconds since 1900: %d' % secsSince1900)
+    # Get current time 2208988800 is the seconds between 1970 and 1900
+    timeNow = time.gmtime(secsSince1900 - 2208988800)
+    print(timeNow)
+
 except KeyboardInterrupt:
     machine.reset()
